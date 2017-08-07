@@ -34,18 +34,18 @@ https://limitless-everglades-67784.herokuapp.com
 ## API Routes
 
 To summarize what this Battleship API can do, here are some simple breakdowns:
-- [Create a new board game](#create-board)
-- [View all existing board games](#view-all)
-- [View specific board game](#view-specific)
-- [Manually place a ship onto the board, one-by-one](#manual-place)
-- [Automatically fill the board with all the ships and have it ready to play](#automatic-place)
-- [Attack on a specific grid](#attack)
-- [View game status](#view-status)
-- [View attack history](#attack-history)
+- [Create a new board game](#create-a-new-board-game)
+- [View all existing board games](#view-all-existing-board-games)
+- [View specific board game](#view-specific-board-games)
+- [Manually place a ship onto the board, one-by-one](#manually-place-a-ship-onto-the-board-one-by-one)
+- [Automatically fill the board with all the ships and have it ready to play](#automatically-fill-the-board-with-all-the-ships-and-have-it-ready-to-play)
+- [Attack on a specific grid](#attack-on-a-specific-grid)
+- [View game status](#view-game-status)
+- [View attack history](#view-attack-history)
 
 When using POST method to submit data, *please make sure that the body is set to x-www-form-urlencoded and not form-data*
 
-### Create a new board game(#create)
+### Create a new board game
 ```
 POST /api/board
 ```
