@@ -14,9 +14,10 @@ var should = require("should");
 describe('ApiController', function() {
   // Before each test we empty the database and create one default board
   var mainBoard;
+  var mainShip;
 
   beforeEach(function(done) {
-    Board.remove({}, function(err) {
+    Board.remove({}, function() {
       Board.create({}, function(err, board) {
         mainBoard = board;
         done();
@@ -252,7 +253,7 @@ describe('ApiController', function() {
   describe('POST /board/:id/place', function() {
     describe("should be able to place a ship normally", function() {
       beforeEach(function(done) {
-        Ship.remove({}, function(err) { 
+        Ship.remove({}, function() { 
           done();
         });
       });
@@ -727,7 +728,7 @@ describe('ApiController', function() {
 
   describe('POST /board/:id/place-auto', function() {
     beforeEach(function(done) {
-      Ship.remove({}, function(err) { 
+      Ship.remove({}, function() { 
         done();
       });
     });
@@ -751,25 +752,6 @@ describe('ApiController', function() {
         done();
       });
     });
-
-    // describe('validation', function() {
-    //   it("should not generate if there is already a ship created", function(done) {
-    //     Ship.create({
-    //       length : 3,
-    //       tiles : [[4,4],[4,5],[4,6]],
-    //       boardId : mainBoard.id
-    //     },
-    //     function () {
-    //       supertest
-    //       .post("/api/board/" + mainBoard.id + "/place-auto")
-    //       .end(function(err, res) {
-    //         res.status.should.equal(400);
-    //         res.error.text.should.containEql('non-empty board');
-    //         done();
-    //       });
-    //     });
-    //   });
-    // });
   });
 
   describe('POST /board/:id/attack', function() {
@@ -777,7 +759,7 @@ describe('ApiController', function() {
     beforeEach(function(done) {
       Board.update({ _id: mainBoard.id }, { $set: { state: "start" } }, function() {});
       Attack.remove({}, function() {
-        Ship.remove({}, function(err) {
+        Ship.remove({}, function() {
           Ship.create({
             length : 2,
             tiles : [[4,4],[4,5]],
@@ -883,6 +865,157 @@ describe('ApiController', function() {
         res.status.should.equal(500);
         res.error.text.should.containEql('contains a non-integer');
         done();
+      });
+    });
+  });
+
+  describe('GET /board/:id/status', function() {
+    beforeEach(function(done) {
+      Board.update({ _id: mainBoard.id }, { $set: { state: "start" } }, function() {});
+      Attack.remove({}, function() {
+        Ship.remove({}, function() {
+          Ship.create({
+            length : 2,
+            tiles : [[4,4],[4,5]],
+            boardId : mainBoard.id
+          },
+          function (err, ship) {
+            mainShip = ship;
+            Ship.create({
+              length : 1,
+              tiles : [[7,2]],
+              boardId : mainBoard.id
+            },
+            function () {
+              done();
+            });
+          });
+        });
+      });
+    });
+
+    it("should return proper status", function(done) {
+      supertest
+      .get("/api/board/" + mainBoard.id + "/status")
+      .end(function(err, res) {
+        res.status.should.equal(200);
+        res.body.data.id.should.equal(mainBoard.id);
+        res.body.data.attacks.total.should.equal(0);
+        res.body.data.attacks.hit.should.equal(0);
+        res.body.data.attacks.miss.should.equal(0);
+        res.body.data.ships.should.be.instanceof(Array).and.have.lengthOf(2);
+        done();
+      });
+    });
+
+    it("should have correct hit and miss", function(done) {
+      Attack.create({
+        boardId : mainBoard.id,
+        shipId : mainShip.id,
+        tile : [4,4],
+        state : "hit"
+      },
+      function () {
+        Attack.create({
+          boardId : mainBoard.id,
+          tile : [3,4],
+          state : "miss"
+        },
+        function () {
+          supertest
+          .get("/api/board/" + mainBoard.id + "/status")
+          .end(function(err, res) {
+            res.status.should.equal(200);
+            res.body.data.id.should.equal(mainBoard.id);
+            res.body.data.attacks.total.should.equal(2);
+            res.body.data.attacks.hit.should.equal(1);
+            res.body.data.attacks.miss.should.equal(1);
+            res.body.data.ships.should.be.instanceof(Array).and.have.lengthOf(2);
+            done();
+          });
+        });
+      });
+    });
+  });
+
+  describe('GET /board/:id/attack/history', function() {
+    beforeEach(function(done) {
+      Board.update({ _id: mainBoard.id }, { $set: { state: "start" } }, function() {});
+      Attack.remove({}, function() {});
+      Ship.remove({}, function() {});
+      Ship.create({
+        length : 2,
+        tiles : [[4,4],[4,5]],
+        boardId : mainBoard.id
+      }, function(err, ship) {
+        mainShip = ship;
+        Attack.create({
+          boardId : mainBoard.id,
+          shipId : mainShip.id,
+          tile : [4,4],
+          state : "hit"
+        }, function() {
+          done();
+        });
+      });
+    });
+
+    it("should return correct attack history", function(done) {
+      supertest
+      .get("/api/board/" + mainBoard.id + "/attack/history")
+      .end(function(err, res) {
+        res.status.should.equal(200);
+        res.body.data.should.be.instanceof(Array).and.have.lengthOf(2);
+        res.body.data[0].should.containEql("Game started");
+        res.body.data[1].should.containEql("[4, 4]");
+        res.body.data[1].should.containEql("hit");
+        done();
+      });
+    });
+
+    it("should return additional attack history", function(done) {
+      Attack.create({
+        boardId : mainBoard.id,
+        tile : [3,4],
+        state : "miss"
+      }, function() {
+        supertest
+        .get("/api/board/" + mainBoard.id + "/attack/history")
+        .end(function(err, res) {
+          res.status.should.equal(200);
+          res.body.data.should.be.instanceof(Array).and.have.lengthOf(3);
+          res.body.data[0].should.containEql("Game started");
+          res.body.data[1].should.containEql("[4, 4]");
+          res.body.data[1].should.containEql("hit");
+          res.body.data[2].should.containEql("[3, 4]");
+          res.body.data[2].should.containEql("miss");
+          done();
+        });
+      });
+    });
+
+    it("should return end game statement", function(done) {
+      Attack.create({
+        boardId : mainBoard.id,
+        shipId : mainShip.id,
+        tile : [4,5],
+        state : "hit"
+      }, function() {
+        Board.update({ _id: mainBoard.id }, { $set: { state: "end" } }, function() {
+          supertest
+          .get("/api/board/" + mainBoard.id + "/attack/history")
+          .end(function(err, res) {
+            res.status.should.equal(200);
+            res.body.data.should.be.instanceof(Array).and.have.lengthOf(4);
+            res.body.data[0].should.containEql("started");
+            res.body.data[1].should.containEql("[4, 4]");
+            res.body.data[1].should.containEql("hit");
+            res.body.data[2].should.containEql("[4, 5]");
+            res.body.data[2].should.containEql("hit");
+            res.body.data[3].should.containEql("ended");
+            done();
+          });
+        });
       });
     });
   });

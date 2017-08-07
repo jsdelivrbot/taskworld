@@ -267,7 +267,6 @@ router.post('/board/:id/attack', function (req, res) {
                 Attack.create({
                   boardId : board.id,
                   shipId : ship.id,
-                  isKillingBlow : true,
                   tile : tile,
                   state : "hit"
                 }, function (err) {
@@ -290,7 +289,6 @@ router.post('/board/:id/attack', function (req, res) {
               Attack.create({
                 boardId : board.id,
                 shipId : ship.id,
-                isKillingBlow : false,
                 tile : tile,
                 state : "hit"
               }, function (err) {
@@ -373,12 +371,13 @@ router.get('/board/:id/attack/history', function (req, res) {
     Attack.find({ boardId: board.id }, function(err, attacks) {
       for (i = 0; i < attacks.length; i++) {
         var attack = attacks[i];
-        logs.push("Attack on tile [" + attack.tile[0] + ", " + attack.tile[1] + "]");
+        var attackLog = "Attack on tile [" + attack.tile[0] + ", " + attack.tile[1] + "]. ";
         if (attack.state == "hit" && attack.shipId !== null) {
-          logs.push("It's a " + attack.state + "!");
+          attackLog += "It's a " + attack.state + "!";
         } else {
-          logs.push("It's a miss.");
+          attackLog += "It's a miss.";
         }
+        logs.push(attackLog);
       }
 
       if (board.state == "end") {

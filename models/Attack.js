@@ -15,10 +15,6 @@ var AttackSchema = new mongoose.Schema({
     enum: ["hit", "miss"],
     required: true
   },
-  isKillingBlow: { // does this attack cause the ship to sink?
-    type: Boolean,
-    default: false
-  },
   tile: {
     type: [Number],
     required: true
